@@ -20,4 +20,4 @@ ENV ENV=PROD
 EXPOSE 8000
 
 # Run FastAPI app
-CMD ["python", "main.py"]
+CMD ["python", "run.py"]
