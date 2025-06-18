@@ -23,20 +23,6 @@ async def get_current_user(
 
     return user
 
-async def get_optional_user(
-        token: Optional[str] = Depends(oauth2_scheme),
-        db: Session = Depends(get_db)
-        ) -> Optional[User]:
-    if token is None:
-        return None
-    try:
-        payload = decode_access_token(token)
-        username = payload.get("username")
-        user = user_crud.get_user_by_username(db, username)
-        return user
-    except Exception:
-        return None
-
 def authorization_level_required(required_level: AccountLevel = AccountLevel.BASIC):
     def dependency(user=Depends(get_current_user)):
         if AccountLevel[user.account_type] < required_level:
@@ -46,3 +32,9 @@ def authorization_level_required(required_level: AccountLevel = AccountLevel.BAS
             )
         return user
     return Depends(dependency)
+
+def get_storage():
+    from app.modules.documents.storage import LocalStorage
+    if settings.is_production_server() and False:
+        raise NotImplementedError("Storage for production is not implemented yet.")
+    return LocalStorage()

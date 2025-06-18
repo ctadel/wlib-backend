@@ -9,7 +9,7 @@ from typing import Optional
 from uuid import uuid4
 
 from app.common.database import get_db
-from app.common.dependencies import get_current_user, get_optional_user
+from app.common.dependencies import get_current_user, get_storage
 from app.common.logger import logger
 from app.modules.documents import crud
 from app.modules.documents.models import Document, IngestionStatus
@@ -20,11 +20,9 @@ from app.config import settings
 from app.common.constants import FreeTierLimitations, PaginationConstants
 from app.common.auth import decode_access_token
 
-#TODO: use S3/Cloud storage for Production
-storage = LocalStorage()
 
 class BasicService:
-    def __init__(self, request: Request, db: AsyncSession = Depends(get_db)):
+    def __init__(self, request: Request, db: AsyncSession = Depends(get_db, get_storage)):
         self.db = db
         self.request = request
 
@@ -52,9 +50,14 @@ class BasicService:
 
 
 class DocumentService:
-    def __init__(self, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    def __init__(self,
+                 db: AsyncSession = Depends(get_db),
+                 user: User = Depends(get_current_user),
+                 storage: LocalStorage = Depends(get_storage)
+             ):
         self.user = user
         self.db = db
+        self.storage = storage
 
     async def list_user_documents(self):
         documents = await crud.get_user_documents(self.db, self.user.id)
@@ -96,7 +99,7 @@ class DocumentService:
             document_key = str(uuid4())
             version = 1
 
-        file_path = await storage.upload_file(file.file, f"{document_key}_{version}")
+        file_path = await self.storage.upload_file(file.file, f"{document_key}_{version}")
 
         new_doc = await crud.create_document(
             db=self.db,
